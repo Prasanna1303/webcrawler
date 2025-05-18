@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/pages")
@@ -19,8 +20,11 @@ public class WebCrawlerController {
     }
 
     @GetMapping
-    public Map<String, String> getPages(@RequestParam(name = "target") String targetUrl) {
-        String html = webCrawlerService.retrieveHtml(targetUrl);
-        return Map.of("url", targetUrl, "html", html);
+    public Map<String, Object> getCrawledPages(@RequestParam(name = "target") String targetUrl) {
+        Set<String> crawledPages = webCrawlerService.crawlWebsite(targetUrl);
+        return Map.of(
+                "domain", targetUrl,
+                "pages", crawledPages
+        );
     }
 }
