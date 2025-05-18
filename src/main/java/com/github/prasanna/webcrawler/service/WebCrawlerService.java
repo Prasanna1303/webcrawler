@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -15,15 +16,22 @@ import java.util.Set;
 @Service
 public class WebCrawlerService {
 
-    public Set<String> crawlWebsite(String seedURL) {
+    @Value("${webcrawler.default-max-depth}")
+    private int defaultMaxDepth;
+
+    public Set<String> crawlWebsite(String seedURL, Integer maxDepth) {
         // maintain the order of visited URLs
         Set<String> visitedSet = new LinkedHashSet<>();
-        crawl(seedURL, visitedSet, getDomain(seedURL));
+        if (maxDepth == null || maxDepth < 0 || maxDepth > defaultMaxDepth) {
+            maxDepth = defaultMaxDepth;
+        }
+
+        crawl(seedURL, visitedSet, getDomain(seedURL), 0, maxDepth);
         return  visitedSet;
     }
 
-    private void crawl(String url, Set<String> visitedSet, String domain) {
-        if (visitedSet.contains(url)) {
+    private void crawl(String url, Set<String> visitedSet, String domain, int currentDepth, int maxDepth) {
+        if (visitedSet.contains(url) || currentDepth > maxDepth) {
             return;
         }
         visitedSet.add(url);
@@ -33,12 +41,8 @@ public class WebCrawlerService {
             Elements links = document.select("a[href]");
             for (Element link: links) {
                 String absUrl = link.absUrl("href");
-                if (absUrl.isEmpty()) {
-                    continue;
-                }
-
-                if (isSameDomain(domain, absUrl)) {
-                    crawl(absUrl, visitedSet, domain);
+                if (!absUrl.isEmpty() && isSameDomain(domain, absUrl)) {
+                    crawl(absUrl, visitedSet, domain, currentDepth + 1, maxDepth);
                 }
             }
         } catch (IOException e) {

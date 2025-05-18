@@ -28,4 +28,17 @@ public class WebCrawlerControllerIntegrationTest {
                 .body("domain", equalTo("https://www.example.com"))
                 .body("pages[0]", equalTo("https://www.example.com"));
     }
+
+    @Test
+    void testGetCrawledPages_withDepth1_shouldReturnOnlySeedPage() {
+        given()
+                .queryParam("target", "https://www.example.com")
+                .queryParam("depth", "0")
+                .when()
+                .get("/pages")
+                .then()
+                .statusCode(200)
+                .body("domain", equalTo("https://www.example.com"))
+                .body("pages.size()", equalTo(1));
+    }
 }

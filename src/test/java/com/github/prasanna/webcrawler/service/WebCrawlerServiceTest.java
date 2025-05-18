@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,8 +15,16 @@ public class WebCrawlerServiceTest {
     @Test
     public void testCrawlWebsite_shouldReturnUrlsOnSameDomain() {
         String targetUrl = "http://www.example.com";
-        Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl);
+        Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl, null);
         assertTrue(crawledUrls.contains(targetUrl));
         assertFalse(crawledUrls.stream().anyMatch(url -> url.contains("google.com")));
+    }
+
+    @Test
+    public void testCrawlWebsite_withDepthLimit0_shouldOnlyIncudeSeedPage() {
+        String targetUrl = "http://www.example.com";
+        Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl, 0);
+        assertTrue(crawledUrls.contains(targetUrl));
+        assertEquals(1, crawledUrls.size());
     }
 }

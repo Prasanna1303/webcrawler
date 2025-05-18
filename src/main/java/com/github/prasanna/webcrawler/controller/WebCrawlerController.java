@@ -20,8 +20,10 @@ public class WebCrawlerController {
     }
 
     @GetMapping
-    public Map<String, Object> getCrawledPages(@RequestParam(name = "target") String targetUrl) {
-        Set<String> crawledPages = webCrawlerService.crawlWebsite(targetUrl);
+    public Map<String, Object> getCrawledPages(
+            @RequestParam(name = "target") String targetUrl,
+            @RequestParam(name = "depth", required = false) Integer depth) {
+        Set<String> crawledPages = webCrawlerService.crawlWebsite(targetUrl, depth);
         return Map.of(
                 "domain", targetUrl,
                 "pages", crawledPages
