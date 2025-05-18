@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.StringContains.containsString;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 public class WebCrawlerControllerIntegrationTest {
@@ -19,14 +18,14 @@ public class WebCrawlerControllerIntegrationTest {
     }
 
     @Test
-    void testGetPages_returnsHtml() {
+    void testGetCrawledPages_shouldReturnPageList() {
         given()
                 .queryParam("target", "https://www.example.com")
                 .when()
                 .get("/pages")
                 .then()
                 .statusCode(200)
-                .body("url", equalTo("https://www.example.com"))
-                .body("html", containsString("<html"));
+                .body("domain", equalTo("https://www.example.com"))
+                .body("pages[0]", equalTo("https://www.example.com"));
     }
 }
