@@ -1,5 +1,7 @@
 package com.github.prasanna.webcrawler.service;
 
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -11,44 +13,84 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 @Service
+@Slf4j
 public class WebCrawlerService {
 
     @Value("${webcrawler.default-max-depth}")
     private int defaultMaxDepth;
 
-    public Set<String> crawlWebsite(String seedURL, Integer maxDepth) {
-        // maintain the order of visited URLs
-        Set<String> visitedSet = new LinkedHashSet<>();
-        if (maxDepth == null || maxDepth < 0 || maxDepth > defaultMaxDepth) {
-            maxDepth = defaultMaxDepth;
-        }
+    @Value("${webcrawler.thread-pool-size}")
+    private int threadPoolSize;
 
-        crawl(seedURL, visitedSet, getDomain(seedURL), 0, maxDepth);
-        return  visitedSet;
+    private Executor executor;
+
+    @PostConstruct
+    // initializes the executor after the thead pool size is injected
+    public void init() {
+        this.executor = Executors.newFixedThreadPool(threadPoolSize);
     }
 
-    private void crawl(String url, Set<String> visitedSet, String domain, int currentDepth, int maxDepth) {
-        if (visitedSet.contains(url) || currentDepth > maxDepth) {
-            return;
+    public Set<String> crawlWebsite(String seedURL, Integer depth) {
+        // thread-safe set to store visited URLs
+        Set<String> visitedSet = ConcurrentHashMap.newKeySet();
+        int maxDepth = (depth == null || depth < 0 || depth > defaultMaxDepth) ? defaultMaxDepth : depth;
+        String domain = getDomain(seedURL);
+
+        CompletableFuture<Void> crawlFuture = crawl(seedURL, visitedSet, domain, 0, maxDepth);
+
+        // wait for the crawl to finish
+        try {
+            crawlFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("crawling interrupted", e);
+        }
+
+        // maintain the insertion order
+        return new LinkedHashSet<>(visitedSet);
+    }
+
+    private CompletableFuture<Void> crawl(String url, Set<String> visitedSet, String domain, int depth, int maxDepth) {
+        if (visitedSet.contains(url) || depth > maxDepth) {
+            return CompletableFuture.completedFuture(null);
         }
         visitedSet.add(url);
 
+        return CompletableFuture.supplyAsync(() -> getLinks(url), executor)
+                .thenCompose(links -> {
+                    List<CompletableFuture<Void>> futures = links.stream()
+                            .filter(link -> isSameDomain(domain, link))
+                            .map(link -> crawl(link, visitedSet, domain, depth + 1, maxDepth))
+                            .toList();
+
+                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+                });
+    }
+
+    private Set<String> getLinks(String url) {
+        Set<String> fetchedLinksSet = new LinkedHashSet<>();
         try {
             Document document = Jsoup.connect(url).get();
             Elements links = document.select("a[href]");
             for (Element link: links) {
                 String absUrl = link.absUrl("href");
-                if (!absUrl.isEmpty() && isSameDomain(domain, absUrl)) {
-                    crawl(absUrl, visitedSet, domain, currentDepth + 1, maxDepth);
+                if (!absUrl.isEmpty()) {
+                    fetchedLinksSet.add(absUrl);
                 }
             }
         } catch (IOException e) {
-            // handle errors gracefully (404, timeout, etc.)
-            throw new RuntimeException(e);
+            log.error("Error fetching links from URL: {} - ", url, e);
         }
+
+        return fetchedLinksSet;
     }
 
     private boolean isSameDomain(String baseDomain, String url) {

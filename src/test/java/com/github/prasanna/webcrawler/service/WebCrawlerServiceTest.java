@@ -31,4 +31,15 @@ public class WebCrawlerServiceTest {
         assertTrue(crawledUrls.contains(targetUrl));
         assertEquals(1, crawledUrls.size());
     }
+
+    @Test
+    public void testCrawlWebsite_shouldHandleParallelProcessing() {
+        String targetUrl = "http://www.example.com";
+        long startTime = System.currentTimeMillis();
+
+        Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl, 2);
+        long endTime = System.currentTimeMillis();
+        assertTrue(crawledUrls.contains(targetUrl));
+        assertTrue(endTime - startTime < 1000, "Crawling took too long, parallel processing might not be working");
+    }
 }
