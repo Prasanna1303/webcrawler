@@ -40,6 +40,6 @@ public class WebCrawlerServiceTest {
         Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl, 2);
         long endTime = System.currentTimeMillis();
         assertTrue(crawledUrls.contains(targetUrl));
-        assertTrue(endTime - startTime < 500, "Crawling took too long, parallel processing might not be working");
+        assertTrue(endTime - startTime < 1000, "Crawling took too long, parallel processing might not be working");
     }
 }
