@@ -34,7 +34,7 @@ public class WebCrawlerServiceTest {
 
     @Test
     public void testCrawlWebsite_shouldHandleParallelProcessing() {
-        String targetUrl = "https://filip-ph-johansson.github.io";
+        String targetUrl = "http://www.example.com";
         long startTime = System.currentTimeMillis();
 
         Set<String> crawledUrls = webCrawlerService.crawlWebsite(targetUrl, 2);
