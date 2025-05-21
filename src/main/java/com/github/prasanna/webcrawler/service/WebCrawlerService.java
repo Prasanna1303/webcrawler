@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -30,6 +31,12 @@ public class WebCrawlerService {
 
     @Value("${webcrawler.thread-pool-size}")
     private int threadPoolSize;
+
+    @Value("${webcrawler.crawl-timeout}")
+    private int crawlTimeout;
+
+    @Value("${webcrawler.connection-timeout}")
+    private int connectionTimeout;
 
     private Executor executor;
 
@@ -50,7 +57,8 @@ public class WebCrawlerService {
 
         String domain = getDomain(seedURL);
 
-        CompletableFuture<Void> crawlFuture = crawl(seedURL, visitedSet, domain, 0, maxDepth);
+        CompletableFuture<Void> crawlFuture = crawl(seedURL, visitedSet, domain, 0, maxDepth)
+                .orTimeout(crawlTimeout, TimeUnit.SECONDS); // set timeout for the crawl
 
         // wait for the crawl to finish
         try {
@@ -87,7 +95,9 @@ public class WebCrawlerService {
         Set<String> fetchedLinksSet = new LinkedHashSet<>();
         try {
             log.debug("Getting links for URL: {}", url);
-            Document document = Jsoup.connect(url).get();
+            Document document = Jsoup.connect(url)
+                    .timeout(connectionTimeout) // timeout to prevent long waits
+                    .get();
             Elements links = document.select("a[href]");
             for (Element link: links) {
                 String absUrl = link.absUrl("href");
