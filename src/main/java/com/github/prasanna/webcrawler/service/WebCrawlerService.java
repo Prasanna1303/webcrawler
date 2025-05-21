@@ -116,10 +116,15 @@ public class WebCrawlerService {
     private String getDomain(String seedURL) {
         try {
             URI uri = new URI(seedURL);
+            String domain = uri.getHost();
+            if (domain == null) {
+                throw new IllegalArgumentException("URL does not contain a valid domain: " + seedURL);
+            }
+
             return uri.getHost();
         } catch (URISyntaxException e) {
             log.error("Invalid target URL: {} - ", seedURL, e);
-            throw new RuntimeException("Invalid URL while getting domain: " + seedURL, e);
+            throw new IllegalArgumentException("Invalid target URL: " + seedURL, e);
         }
     }
 
