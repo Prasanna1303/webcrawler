@@ -37,12 +37,17 @@ public class WebCrawlerService {
     // initializes the executor after the thead pool size is injected
     public void init() {
         this.executor = Executors.newFixedThreadPool(threadPoolSize);
+        log.info("WebCrawler service initialized with thread pool size: {}", threadPoolSize);
     }
 
     public Set<String> crawlWebsite(String seedURL, Integer depth) {
+        log.info("Started Crawling for target URL: {}", seedURL);
         // thread-safe set to store visited URLs
         Set<String> visitedSet = ConcurrentHashMap.newKeySet();
         int maxDepth = (depth == null || depth < 0 || depth > defaultMaxDepth) ? defaultMaxDepth : depth;
+
+        log.info("Crawling depth set to: {}", maxDepth);
+
         String domain = getDomain(seedURL);
 
         CompletableFuture<Void> crawlFuture = crawl(seedURL, visitedSet, domain, 0, maxDepth);
@@ -51,10 +56,11 @@ public class WebCrawlerService {
         try {
             crawlFuture.get();
         } catch (InterruptedException | ExecutionException e) {
+            log.error("Crawling interrupted for target URL: {}", seedURL, e);
             throw new RuntimeException("crawling interrupted", e);
         }
 
-        // maintain the insertion order
+        log.info("Crawling completed for target URL: {} with {} links", seedURL, visitedSet.size());
         return new LinkedHashSet<>(visitedSet);
     }
 
@@ -62,6 +68,8 @@ public class WebCrawlerService {
         if (visitedSet.contains(url) || depth > maxDepth) {
             return CompletableFuture.completedFuture(null);
         }
+
+        log.info("Crawling URL: {} at depth: {}", url, depth);
         visitedSet.add(url);
 
         return CompletableFuture.supplyAsync(() -> getLinks(url), executor)
@@ -78,6 +86,7 @@ public class WebCrawlerService {
     private Set<String> getLinks(String url) {
         Set<String> fetchedLinksSet = new LinkedHashSet<>();
         try {
+            log.debug("Getting links for URL: {}", url);
             Document document = Jsoup.connect(url).get();
             Elements links = document.select("a[href]");
             for (Element link: links) {
@@ -86,6 +95,7 @@ public class WebCrawlerService {
                     fetchedLinksSet.add(absUrl);
                 }
             }
+            log.debug("Fetched {} links from URL: {}", fetchedLinksSet.size(), url);
         } catch (IOException e) {
             log.error("Error fetching links from URL: {} - ", url, e);
         }
@@ -98,6 +108,7 @@ public class WebCrawlerService {
             URI uri = new URI(url);
             return baseDomain.equalsIgnoreCase(uri.getHost());
         } catch (URISyntaxException e) {
+            log.warn("Invalid URL encountered while checking for same domain: {} - ", url, e);
             return false;
         }
     }
@@ -105,9 +116,15 @@ public class WebCrawlerService {
     private String getDomain(String seedURL) {
         try {
             URI uri = new URI(seedURL);
+            String domain = uri.getHost();
+            if (domain == null) {
+                throw new IllegalArgumentException("URL does not contain a valid domain: " + seedURL);
+            }
+
             return uri.getHost();
         } catch (URISyntaxException e) {
-            throw new RuntimeException("Invalid URL while getting domain: " + seedURL, e);
+            log.error("Invalid target URL: {} - ", seedURL, e);
+            throw new IllegalArgumentException("Invalid target URL: " + seedURL, e);
         }
     }
 

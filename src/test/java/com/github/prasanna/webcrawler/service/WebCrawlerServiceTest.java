@@ -8,6 +8,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -41,5 +42,17 @@ public class WebCrawlerServiceTest {
         long endTime = System.currentTimeMillis();
         assertTrue(crawledUrls.contains(targetUrl));
         assertTrue(endTime - startTime < 1000, "Crawling took too long, parallel processing might not be working");
+    }
+
+    @Test
+    public void testCrawlWebsite_withInvalidUrl_shouldThrowException() {
+        String invalidUrl = "https:/ /www.example.com";
+        assertThrows(IllegalArgumentException.class, () -> webCrawlerService.crawlWebsite(invalidUrl, 1));
+    }
+
+    @Test
+    public void testCrawlWebsite_withUrlWithoutDomain_shouldThrowException() {
+        String urlWithoutDomain = "invalid-url";
+        assertThrows(IllegalArgumentException.class, () -> webCrawlerService.crawlWebsite(urlWithoutDomain, 1));
     }
 }

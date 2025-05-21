@@ -1,12 +1,12 @@
 package com.github.prasanna.webcrawler.controller;
 
+import com.github.prasanna.webcrawler.model.CrawledPagesResponse;
 import com.github.prasanna.webcrawler.service.WebCrawlerService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -20,13 +20,11 @@ public class WebCrawlerController {
     }
 
     @GetMapping
-    public Map<String, Object> getCrawledPages(
+    public CrawledPagesResponse getCrawledPages(
             @RequestParam(name = "target") String targetUrl,
             @RequestParam(name = "depth", required = false) Integer depth) {
         Set<String> crawledPages = webCrawlerService.crawlWebsite(targetUrl, depth);
-        return Map.of(
-                "domain", targetUrl,
-                "pages", crawledPages
-        );
+
+        return new CrawledPagesResponse(targetUrl, crawledPages);
     }
 }
