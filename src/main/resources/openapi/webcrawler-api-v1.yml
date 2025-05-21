@@ -1,0 +1,63 @@
+openapi: 3.0.3
+info:
+  title: Web Crawler API
+  version: 1.0.0
+  description: API for crawling web pages belonging to a given website and retrieving links.
+paths:
+  /pages:
+    get:
+      summary: Get crawled pages from the provided URL
+      description: Returns a list of pages crawled from the target URL.
+      parameters:
+        - name: target
+          in: query
+          required: true
+          description: Target URL to crawl.
+          schema:
+            type: string
+            format: uri
+        - name: depth
+          in: query
+          required: false
+          description: Depth limit for crawling. Defaults to the configured max depth.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully retrieved crawled pages.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                    description: Domain of the target URL.
+                  pages:
+                    type: array
+                    items:
+                      type: string
+                      description: A crawled URL.
+        '400':
+          description: Invalid target URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        title:
+          type: string
+          description: A short summary of the error.
+        detail:
+          type: string
+          description: A detailed description of the error.

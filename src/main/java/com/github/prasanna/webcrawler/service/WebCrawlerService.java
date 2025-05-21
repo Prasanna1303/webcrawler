@@ -41,7 +41,7 @@ public class WebCrawlerService {
     private Executor executor;
 
     @PostConstruct
-    // initializes the executor after the thead pool size is injected
+    // initializes the executor after the thread pool size is injected
     public void init() {
         this.executor = Executors.newFixedThreadPool(threadPoolSize);
         log.info("WebCrawler service initialized with thread pool size: {}", threadPoolSize);
